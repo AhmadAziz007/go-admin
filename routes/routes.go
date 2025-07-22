@@ -10,6 +10,9 @@ import (
 )
 
 func Setup(app *fiber.App, db *gorm.DB, minioService *service.MinioService) {
+	dashboardService := service.NewDashboardService(db)
+	dashboardController := controller.NewDashboardController(dashboardService)
+
 	userService := service.NewUserService(db)
 	userController := controller.NewUserController(userService)
 
@@ -24,6 +27,14 @@ func Setup(app *fiber.App, db *gorm.DB, minioService *service.MinioService) {
 
 	customerService := service.NewCustomerService(db)
 	customerController := controller.NewCustomerController(customerService)
+
+	salesService := service.NewSalesService(db)
+	salesController := controller.NewSalesController(salesService)
+
+	profitService := service.NewProfitService(db)
+	profitController := controller.NewProfitController(profitService)
+
+	app.Get("/api/", dashboardController.GetDashboard)
 
 	app.Post("/api/register", controller.Register)
 	app.Post("/api/login", controller.Login)
@@ -248,4 +259,11 @@ func Setup(app *fiber.App, db *gorm.DB, minioService *service.MinioService) {
 		return transactionController.PayOrder(c)
 	})
 
+	app.Post("/api/sales/filter", salesController.FilterSales)
+	app.Post("/api/sales/export-excel", salesController.ExportExcel)
+	app.Post("/api/sales/export-pdf", salesController.ExportPDF)
+
+	app.Post("/api/profit/filter", profitController.FilterProfit)
+	app.Post("/api/profit/export-excel", profitController.ExportExcel)
+	app.Post("/api/profit/export-pdf", profitController.ExportPDF)
 }

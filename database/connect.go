@@ -27,6 +27,7 @@ func Connect() *gorm.DB {
 		&models.Customer{},
 		&models.Transaction{},
 		&models.TransactionDetail{},
+		&models.Profit{},
 	)
 	if err != nil {
 		panic("Migration failed: " + err.Error())

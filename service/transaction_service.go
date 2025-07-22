@@ -75,7 +75,6 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 	if err != nil {
 		return nil, err
 	}
-
 	if len(carts) == 0 {
 		return nil, errors.New("cart is empty")
 	}
@@ -83,12 +82,11 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 	discountAmount := (discountPercent / 100) * total
 	grandTotal := total - discountAmount
 	change := cash - grandTotal
-
 	if change < 0 {
 		return nil, errors.New("cash is not enough")
 	}
 
-	// Start transaction
+	// Mulai transaksi
 	tx := s.db.Begin()
 	defer func() {
 		if r := recover(); r != nil {
@@ -96,29 +94,27 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 		}
 	}()
 
-	// Validasi stok sebelum transaksi
+	// Validasi stok
 	for _, cart := range carts {
 		var product models.Product
 		if err := tx.First(&product, cart.ProductID).Error; err != nil {
 			tx.Rollback()
 			return nil, errors.New("product not found")
 		}
-
 		if product.Stock < cart.Qty {
 			tx.Rollback()
 			return nil, fmt.Errorf("stock not enough for product '%s'", product.Title)
 		}
 	}
 
-	// Create transaction
+	// Create Transaction
 	transaction := models.Transaction{
-		UserID:          userID,
-		CustomerID:      customerID,
-		Cash:            cash,
-		Change:          change,
-		Discount:        discountAmount,
-		DiscountPercent: discountPercent,
-		GrandTotal:      grandTotal,
+		UserID:     userID,
+		CustomerID: customerID,
+		Cash:       cash,
+		Change:     change,
+		Discount:   discountAmount,
+		GrandTotal: grandTotal,
 	}
 
 	if err := tx.Create(&transaction).Error; err != nil {
@@ -126,8 +122,16 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 		return nil, err
 	}
 
-	// Create transaction details
+	// Create Detail dan Profit
 	for _, cart := range carts {
+		// Ambil data produk untuk harga beli
+		var product models.Product
+		if err := tx.First(&product, cart.ProductID).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		// Buat detail transaksi
 		detail := models.TransactionDetail{
 			TransactionID: transaction.ID,
 			ProductID:     cart.ProductID,
@@ -138,35 +142,48 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 			tx.Rollback()
 			return nil, err
 		}
-		// Reduce product stock
+
+		// Hitung profit: (sell_price - buy_price) * qty
+		buyTotal := product.Price * cart.Qty
+		sellTotal := product.SellPrice * cart.Qty
+		profitTotal := sellTotal - buyTotal
+
+		profit := models.Profit{
+			TransactionId: transaction.ID,
+			Total:         profitTotal,
+		}
+		if err := tx.Create(&profit).Error; err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+
+		// Kurangi stok
 		if err := tx.Model(&models.Product{}).
 			Where("id = ?", cart.ProductID).
 			Update("stock", gorm.Expr("stock - ?", cart.Qty)).
 			Error; err != nil {
 			tx.Rollback()
-			return nil, errors.New("failed to reduce product stock")
+			return nil, err
 		}
 	}
 
-	// Clear cart
+	// Hapus cart
 	if err := tx.Where("user_id = ?", userID).Delete(&models.Cart{}).Error; err != nil {
 		tx.Rollback()
 		return nil, err
 	}
 
-	transaction.DiscountPercent = discountPercent
-
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
 
-	// Preload transaction details setelah commit
+	// Ambil data lengkap
 	var fullTransaction models.Transaction
 	if err := s.db.Preload("TransactionDetails").First(&fullTransaction, transaction.ID).Error; err != nil {
 		return nil, err
 	}
 
-	fullTransaction.DiscountPercent = discountPercent // Pastikan discount percent diset
+	fullTransaction.DiscountPercent = discountPercent
 
 	return &fullTransaction, nil
 }

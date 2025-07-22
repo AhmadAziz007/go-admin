@@ -9,7 +9,9 @@ import (
 type Transaction struct {
 	ID                 uint                `gorm:"primaryKey" json:"id"`
 	UserID             uint                `json:"user_id"`
+	User               *User               `json:"user" gorm:"foreignKey:UserID"`
 	CustomerID         uint                `json:"customer_id"`
+	Customer           *Customer           `json:"customer" gorm:"foreignKey:CustomerID"`
 	Invoice            string              `json:"invoice"`
 	Cash               float64             `json:"cash"`
 	Change             float64             `json:"change"`
