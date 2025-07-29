@@ -179,17 +179,34 @@ func (c *ProductController) GetAll(ctx *fiber.Ctx) error {
 	page, _ := strconv.Atoi(ctx.Query("page", "1"))
 	limit, _ := strconv.Atoi(ctx.Query("limit", "5"))
 
-	products, total, err := c.service.GetAll(page, limit)
+	// Parse request body untuk mendapatkan title
+	var requestBody struct {
+		Title string `json:"title"`
+	}
+
+	if err := ctx.BodyParser(&requestBody); err != nil {
+		// Jika parsing gagal, anggap tidak ada filter
+		requestBody.Title = ""
+	}
+
+	products, total, err := c.service.GetAll(page, limit, requestBody.Title)
 	if err != nil {
 		return ctx.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	// Hitung last_page
+	lastPage := total / int64(limit)
+	if total%int64(limit) != 0 {
+		lastPage++
 	}
 
 	return ctx.JSON(fiber.Map{
 		"data": products,
 		"meta": fiber.Map{
-			"total": total,
-			"page":  page,
-			"limit": limit,
+			"total":     total,
+			"page":      page,
+			"limit":     limit,
+			"last_page": lastPage,
 		},
 	})
 }

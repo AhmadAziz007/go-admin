@@ -196,7 +196,7 @@ func Setup(app *fiber.App, db *gorm.DB, minioService *service.MinioService) {
 		return productController.GetByID(c)
 	})
 
-	app.Get("/api/products", func(c *fiber.Ctx) error {
+	app.Post("/api/products/search", func(c *fiber.Ctx) error {
 		if err := middlewares.IsAuthorized(c, "products"); err != nil {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
 				"message": err.Error(),

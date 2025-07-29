@@ -8,6 +8,7 @@ import (
 	"go-admin/dto"
 	"go-admin/models"
 	"mime/multipart"
+	"strings"
 
 	"gorm.io/gorm"
 )
@@ -148,23 +149,30 @@ func (s *ProductService) GetByID(id uint) (*dto.ProductResponse, error) {
 	return s.convertToResponse(&product)
 }
 
-func (s *ProductService) GetAll(page, limit int) ([]dto.ProductResponse, int64, error) {
+func (s *ProductService) GetAll(page, limit int, titleProduct string) ([]dto.ProductResponse, int64, error) {
 	var products []models.Product
 	var total int64
 
-	// Hitung total produk dengan benar
-	s.db.Model(&models.Product{}).Count(&total)
+	query := s.db.Model(&models.Product{})
 
-	// Hitung offset dengan benar
-	offset := (page - 1) * limit
-
-	// Ambil data dengan pagination
-	result := s.db.Offset(offset).Limit(limit).Find(&products)
-	if result.Error != nil {
-		return nil, 0, result.Error
+	if titleProduct != "" {
+		upperTitle := strings.ToUpper(titleProduct)
+		query = query.Where("UPPER(title) LIKE ?", "%"+upperTitle+"%")
 	}
 
-	// Konversi ke response TANPA mengambil gambar (untuk efisiensi)
+	// Hitung total dengan filter yang sama
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Hitung offset
+	offset := (page - 1) * limit
+
+	// Ambil data dengan pagination dan filter
+	if err := query.Offset(offset).Limit(limit).Find(&products).Error; err != nil {
+		return nil, 0, err
+	}
+
 	responses := make([]dto.ProductResponse, len(products))
 	for i, p := range products {
 		responses[i] = dto.ProductResponse{
