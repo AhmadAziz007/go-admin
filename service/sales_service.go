@@ -63,7 +63,7 @@ func (s *SalesService) ExportExcel(startDate, endDate string) (*excelize.File, e
 	f.DeleteSheet("Sheet1") //Hapus sheet default
 
 	//Set header
-	header := []string{"No", "Date", "Invoice", "Cashier", "Customer", "Total"}
+	header := []string{"No", "Date", "Invoice", "Cashier", "Customer", "Discount", "Total"}
 	for i, h := range header {
 		cell, _ := excelize.CoordinatesToCellName(i+1, 1)
 		f.SetCellValue(sheet, cell, h)
@@ -89,6 +89,7 @@ func (s *SalesService) ExportExcel(startDate, endDate string) (*excelize.File, e
 			sale.Invoice,
 			cashier,
 			customer,
+			sale.Discount,
 			sale.GrandTotal,
 		}
 
@@ -100,10 +101,10 @@ func (s *SalesService) ExportExcel(startDate, endDate string) (*excelize.File, e
 	}
 
 	totalRow := len(sales) + 2
-	f.SetCellValue(sheet, "A"+strconv.Itoa(totalRow), "TOTAL")
-	f.MergeCell(sheet, "A"+strconv.Itoa(totalRow), "E"+strconv.Itoa(totalRow))
-	f.SetCellValue(sheet, "F"+strconv.Itoa(totalRow), grandTotal)
-	f.SetCellStyle(sheet, "A"+strconv.Itoa(totalRow), "F"+strconv.Itoa(totalRow), s.totalStyle(f))
+	f.SetCellValue(sheet, "A"+strconv.Itoa(totalRow), "TOTAL SALES")
+	f.MergeCell(sheet, "A"+strconv.Itoa(totalRow), "F"+strconv.Itoa(totalRow))
+	f.SetCellValue(sheet, "G"+strconv.Itoa(totalRow), grandTotal)
+	f.SetCellStyle(sheet, "A"+strconv.Itoa(totalRow), "G"+strconv.Itoa(totalRow), s.totalStyle(f))
 
 	for i := range header {
 		col, _ := excelize.ColumnNumberToName(i + 1)
@@ -155,11 +156,11 @@ func (s *SalesService) ExportPDF(startDate, endDate string) ([]byte, error) {
 	pdf.CellFormat(0, 10, "Period: "+startDate+" to "+endDate, "", 1, "L", false, 0, "")
 	pdf.Ln(5)
 
-	headers := []string{"No", "Date", "Invoice", "Cashier", "Customer", "Total"}
+	headers := []string{"No", "Date", "Invoice", "Cashier", "Customer", "Discount", "Total"}
+	colWidths := []float64{10, 40, 50, 50, 50, 30, 40}
 
-	colWidths := []float64{10, 40, 50, 50, 50, 40}
+	pdf.SetFont("Arial", "B", 12)
 	for i, header := range headers {
-		pdf.SetFont("Arial", "B", 12)
 		pdf.CellFormat(colWidths[i], 10, header, "1", 0, "C", false, 0, "")
 	}
 	pdf.Ln(-1)
@@ -178,12 +179,15 @@ func (s *SalesService) ExportPDF(startDate, endDate string) ([]byte, error) {
 
 		date := sale.CreatedAt.Format("2006-01-02 15:04:05")
 
+		discountStr := strconv.FormatFloat(sale.Discount, 'f', 0, 64)
+
 		data := []string{
 			strconv.Itoa(i + 1),
 			date,
 			sale.Invoice,
 			cashier,
 			customer,
+			discountStr,
 			"Rp. " + strconv.FormatFloat(sale.GrandTotal, 'f', 0, 64),
 		}
 
@@ -193,10 +197,14 @@ func (s *SalesService) ExportPDF(startDate, endDate string) ([]byte, error) {
 		pdf.Ln(-1)
 	}
 
-	// Total
 	pdf.SetFont("Arial", "B", 12)
-	pdf.CellFormat(colWidths[0]+colWidths[1]+colWidths[2]+colWidths[3]+colWidths[4], 10, "TOTAL", "1", 0, "C", false, 0, "")
-	pdf.CellFormat(colWidths[5], 10, "Rp. "+strconv.FormatFloat(total, 'f', 0, 64), "1", 1, "C", false, 0, "")
+
+	totalColWidth := colWidths[0] + colWidths[1] + colWidths[2] + colWidths[3] + colWidths[4]
+	pdf.CellFormat(totalColWidth, 10, "TOTAL SALES", "1", 0, "C", false, 0, "")
+
+	pdf.CellFormat(colWidths[5], 10, "", "1", 0, "C", false, 0, "")
+
+	pdf.CellFormat(colWidths[6], 10, "Rp. "+strconv.FormatFloat(total, 'f', 0, 64), "1", 1, "C", false, 0, "")
 
 	// Simpan ke buffer
 	var buf bytes.Buffer
