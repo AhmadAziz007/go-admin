@@ -143,10 +143,8 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 			return nil, err
 		}
 
-		// Hitung profit: (sell_price - buy_price) * qty
 		buyTotal := product.Price * cart.Qty
-		sellTotal := product.SellPrice * cart.Qty
-		profitTotal := sellTotal - buyTotal
+		profitTotal := transaction.GrandTotal - buyTotal
 
 		profit := models.Profit{
 			TransactionId: transaction.ID,
@@ -179,7 +177,15 @@ func (s *TransactionService) PayOrder(userID, customerID uint, discountPercent, 
 
 	// Ambil data lengkap
 	var fullTransaction models.Transaction
-	if err := s.db.Preload("TransactionDetails").First(&fullTransaction, transaction.ID).Error; err != nil {
+	err = s.db.
+		Preload("User").
+		Preload("Customer").
+		Preload("TransactionDetails", func(db *gorm.DB) *gorm.DB {
+			return db.Preload("Product")
+		}).
+		First(&fullTransaction, transaction.ID).Error
+
+	if err != nil {
 		return nil, err
 	}
 

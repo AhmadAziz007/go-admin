@@ -87,7 +87,7 @@ func (s *ProfitService) ExportExcel(startDate, endDate string) (*excelize.File, 
 		total += profit.Total
 	}
 	totalRow := len(profits) + 2
-	f.SetCellValue(sheet, "A"+strconv.Itoa(totalRow), "TOTAL")
+	f.SetCellValue(sheet, "A"+strconv.Itoa(totalRow), "TOTAL PROFIT")
 	f.MergeCell(sheet, "A"+strconv.Itoa(totalRow), "C"+strconv.Itoa(totalRow))
 	f.SetCellValue(sheet, "D"+strconv.Itoa(totalRow), total)
 	f.SetCellStyle(sheet, "A"+strconv.Itoa(totalRow), "D"+strconv.Itoa(totalRow), s.totalStyle(f))
@@ -173,7 +173,7 @@ func (s *ProfitService) ExportPDF(startDate, endDate string) ([]byte, error) {
 
 	// Total
 	pdf.SetFont("Arial", "B", 12)
-	pdf.CellFormat(colWidths[0]+colWidths[1]+colWidths[2], 10, "TOTAL", "1", 0, "C", false, 0, "")
+	pdf.CellFormat(colWidths[0]+colWidths[1]+colWidths[2], 10, "TOTAL PROFIT", "1", 0, "C", false, 0, "")
 	pdf.CellFormat(colWidths[3], 10, "Rp. "+strconv.FormatFloat(totalProfit, 'f', 0, 64), "1", 0, "C", false, 0, "")
 
 	// Simpan ke buffer

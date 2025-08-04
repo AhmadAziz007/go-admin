@@ -259,6 +259,8 @@ func Setup(app *fiber.App, db *gorm.DB, minioService *service.MinioService) {
 		return transactionController.PayOrder(c)
 	})
 
+	app.Get("/api/print/transaction/:invoice", transactionController.PrintTransaction)
+
 	app.Post("/api/sales/filter", salesController.FilterSales)
 	app.Post("/api/sales/export-excel", salesController.ExportExcel)
 	app.Post("/api/sales/export-pdf", salesController.ExportPDF)

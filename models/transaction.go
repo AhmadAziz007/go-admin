@@ -30,11 +30,12 @@ func (transaction *Transaction) AfterCreate(tx *gorm.DB) (err error) {
 }
 
 type TransactionDetail struct {
-	ID            uint    `gorm:"primaryKey" json:"id"`
-	TransactionID uint    `json:"transaction_id"`
-	ProductID     uint    `json:"product_id"`
-	Qty           float64 `json:"qty"`
-	Price         float64 `json:"price"`
+	ID            uint     `gorm:"primaryKey" json:"id"`
+	TransactionID uint     `json:"transaction_id"`
+	ProductID     uint     `json:"product_id"`
+	Product       *Product `json:"product" gorm:"foreignKey:ProductID"`
+	Qty           float64  `json:"qty"`
+	Price         float64  `json:"price"`
 }
 
 func (TransactionDetail) TableName() string {

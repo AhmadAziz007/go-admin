@@ -144,24 +144,33 @@ func (c *TransactionController) PayOrder(ctx *fiber.Ctx) error {
 
 	if err := ctx.BodyParser(&request); err != nil {
 		return ctx.Status(http.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
 			"message": "Invalid request",
+			"error":   err.Error(),
 		})
 	}
 
 	userID, err := c.getUserID(ctx)
 	if err != nil {
-		return err
+		return ctx.Status(http.StatusUnauthorized).JSON(fiber.Map{
+			"success": false,
+			"message": "Unauthorized",
+			"error":   err.Error(),
+		})
 	}
 
 	transaction, err := c.service.PayOrder(userID, request.CustomerID, request.Discount, request.Cash)
 	if err != nil {
 		return ctx.Status(http.StatusInternalServerError).JSON(fiber.Map{
-			"message": err.Error(),
+			"success": false,
+			"message": "Payment failed",
+			"error":   err.Error(),
 		})
 	}
 
 	return ctx.JSON(fiber.Map{
 		"success": true,
+		"message": "Payment successful",
 		"data":    transaction,
 	})
 }
